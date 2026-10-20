@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bloom</title>
+<style>
+:root{--bg1:#fff7f1;--bg2:#f1e4ff;--tx:#5b4468;--stem:#5e9b5a;--btn:#c2579a;--btnx:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg1:#1d1828;--bg2:#10222a;--tx:#e9d9f3;--stem:#7cc477;--btn:#e58bc4;--btnx:#2a1233}}
+:root[data-theme="dark"]{--bg1:#1d1828;--bg2:#10222a;--tx:#e9d9f3;--stem:#7cc477;--btn:#e58bc4;--btnx:#2a1233}
+html,body{height:100%;margin:0}
+body{background:linear-gradient(160deg,var(--bg1),var(--bg2));color:var(--tx);font-family:Georgia,"Times New Roman",serif;overflow:hidden;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+#ui{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 18px);text-align:center;pointer-events:none}
+#msg{font-size:clamp(18px,4.5vw,26px);transition:opacity .6s}
+#cnt{font-size:14px;opacity:.7;margin-top:4px;letter-spacing:.08em}
+#again{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);transform:translateX(-50%);background:var(--btn);color:var(--btnx);border:0;border-radius:99px;padding:12px 26px;font:inherit;font-size:17px;opacity:0;pointer-events:none;transition:opacity .8s}
+#again.on{opacity:1;pointer-events:auto}
+</style></head><body>
+<canvas id="c"></canvas>
+<div id="ui"><div id="msg">Tap anywhere to plant a flower</div><div id="cnt"></div></div>
+<button id="again">Plant again</button>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d'),msg=document.getElementById('msg'),cnt=document.getElementById('cnt'),again=document.getElementById('again');
+const MAX=9,HUES=[345,320,290,265,20,35,48,0,210,175],R=Math.random;
+let W,H,fl=[],phase='grow',gT=0;
+function rs(){const d=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;ctx.setTransform(d,0,0,d,0,0)}
+addEventListener('resize',rs);rs();
+const cl=(v)=>Math.max(0,Math.min(1,v)),eo=t=>1-Math.pow(1-t,3),eb=t=>{const c=1.7;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2)};
+function petal(l,w,col,pt){ctx.beginPath();ctx.moveTo(0,0);ctx.bezierCurveTo(w,-l*.25,w*.8,-l*(pt?.8:.95),0,-l);ctx.bezierCurveTo(-w*.8,-l*(pt?.8:.95),-w,-l*.25,0,0);ctx.fillStyle=col;ctx.fill();ctx.strokeStyle='rgba(0,0,0,.12)';ctx.lineWidth=1;ctx.stroke()}
+function ring(n,l,w,col,off,pt){for(let i=0;i<n;i++){ctx.save();ctx.rotate(off+i*6.2832/n);petal(l,w,col,pt);ctx.restore()}}
+function dot(r,col){ctx.beginPath();ctx.arc(0,0,r,0,6.2832);ctx.fillStyle=col;ctx.fill()}
+function bloom(f,p){const s=f.size,h=f.hue,sp=(1-p)*.9;ctx.save();ctx.translate(f.x,f.y);ctx.rotate(f.rot+sp);
+switch(f.type){
+case 0:ring(14,s*p,s*.17,`hsl(${h},70%,96%)`,0);dot(s*.2*p,'hsl(45,95%,55%)');break;
+case 1:{const c=`hsl(${h},80%,58%)`;ctx.save();ctx.rotate(-.4);petal(s*p,s*.5,c);ctx.restore();ctx.save();ctx.rotate(.4);petal(s*p,s*.5,c);ctx.restore();petal(s*1.05*p,s*.55,`hsl(${h},85%,66%)`);break}
+case 2:for(let l=0;l<4;l++){const r=s*(1-l*.22)*p;for(let k=0;k<5;k++){const a=k*1.2566+l*.6;ctx.beginPath();ctx.arc(Math.cos(a)*r*.42,Math.sin(a)*r*.42,r*.56,0,6.2832);ctx.fillStyle=`hsl(${h},75%,${52+l*7}%)`;ctx.fill();ctx.strokeStyle='rgba(0,0,0,.14)';ctx.stroke()}}break;
+case 3:ring(22,s*p,s*.12,'hsl(46,95%,55%)',0,1);ring(22,s*.85*p,s*.11,'hsl(40,95%,50%)',.14,1);dot(s*.42*p,'#5a3418');for(let i=0;i<14;i++){ctx.fillStyle='#8a5a2c';ctx.fillRect(Math.cos(i*2.4)*s*.26*p*Math.sqrt(i/14),Math.sin(i*2.4)*s*.26*p*Math.sqrt(i/14),2,2)}break;
+case 4:ring(8,s*p,s*.3,`hsl(${h},70%,80%)`,.39,1);ring(8,s*.85*p,s*.28,`hsl(${h},75%,70%)`,0,1);ring(6,s*.5*p,s*.2,`hsl(${h},80%,62%)`,.2,1);dot(s*.1*p,'hsl(48,95%,60%)');break;
+case 5:ring(5,s*p,s*.5,`hsl(${h},75%,72%)`,0);dot(s*.17*p,'hsl(45,95%,55%)');break;
+default:ring(6,s*p,s*.26,`hsl(${h},85%,62%)`,0,1);ctx.strokeStyle='hsl(40,70%,35%)';ctx.lineWidth=2;for(let i=0;i<6;i++){const a=i*1.047+.5;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(a)*s*.5*p,Math.sin(a)*s*.5*p);ctx.stroke();dot2(Math.cos(a)*s*.5*p,Math.sin(a)*s*.5*p)}}
+ctx.restore()}
+function dot2(x,y){ctx.beginPath();ctx.arc(x,y,2.5,0,6.2832);ctx.fillStyle='hsl(30,80%,40%)';ctx.fill()}
+function stem(f,g,sp){const bx=f.sx+(cx()-f.sx)*g,by=H+12+(by0()-H-12)*g,hx=f.x,hy=f.y;const hd=(hx-bx),vd=(by-hy);const qx=bx+hd*.2+f.bend*(1-g*.7),qy=by-vd*.55;
+ctx.beginPath();ctx.moveTo(bx,by);for(let i=1;i<=24;i++){const t=i/24*sp,u=1-t;ctx.lineTo(u*u*bx+2*u*t*qx+t*t*hx,u*u*by+2*u*t*qy+t*t*hy)}
+ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--stem');ctx.lineWidth=3;ctx.lineCap='round';ctx.stroke();
+if(sp>.5){const t=.45,u=1-t,lx=u*u*bx+2*u*t*qx+t*t*hx,ly=u*u*by+2*u*t*qy+t*t*hy,k=cl((sp-.5)*3);ctx.save();ctx.translate(lx,ly);ctx.rotate(f.bend>0?.9:-.9);ctx.scale(k,k);petal(26,9,'rgba(110,170,100,.9)');ctx.restore()}}
+const cx=()=>W/2,by0=()=>H*.74,U=()=>Math.min(W,H)/10;
+function add(x,y){if(phase!=='grow')return;if(!fl.length)msg.textContent='Keep going…';
+const s=(Math.min(W,H)/15)+R()*Math.min(W,H)/16;
+fl.push({x,y:Math.max(y,H*.18),tx:0,ty:0,sx:x+(R()-.5)*120,type:fl.length<7?[...Array(7).keys()].filter(t=>!fl.some(f=>f.type===t))[0]??(R()*7|0):R()*7|0,hue:HUES[R()*HUES.length|0],size:s,rot:R()*6.28,bend:(R()<.5?-1:1)*(20+R()*40),born:performance.now(),ph:R()*6});
+const f=fl[fl.length-1];if(fl.length<=7){const free=[0,1,2,3,4,5,6].filter(t=>!fl.slice(0,-1).some(o=>o.type===t));f.type=free[R()*free.length|0]}
+cnt.textContent=fl.length+' / '+MAX;
+if(fl.length===MAX){phase='wait';setTimeout(()=>{phase='gather';gT=performance.now();msg.textContent=''},2200)}}
+addEventListener('pointerdown',e=>{if(e.target===again)return;add(e.clientX,e.clientY)});
+again.onclick=()=>{fl=[];phase='grow';again.classList.remove('on');msg.textContent='Tap anywhere to plant a flower';cnt.textContent=''};
+function frame(now){ctx.clearRect(0,0,W,H);
+let g=0;if(phase==='gather'||phase==='done'){g=eo(cl((now-gT)/2600));if(g>=1&&phase==='gather'){phase='done';msg.textContent='A bouquet, grown by you 💐';again.classList.add('on')}}
+const n=fl.length,u=U();
+fl.forEach((f,i)=>{const a=(n>1?(i/(n-1)-.5):0)*2*(.95);const L=u*(i%2?3.3:4.3);const tx=cx()+Math.sin(a)*L*1.05,ty=by0()-Math.cos(a)*L*.95;
+if(f.fx===undefined){f.fx=f.x;f.fy=f.y}
+f.x=f.fx+(tx-f.fx)*g;f.y=f.fy+(ty-f.fy)*g;if(g>0)f.size=f.size+(u*1.05-f.size)*.04*g;f.rot+=Math.sin(now/900+f.ph)*.0015*(1-g)});
+fl.forEach(f=>stem(f,g,eo(cl((now-f.born)/700))));
+if(g>0){ctx.save();ctx.globalAlpha=g;const b=by0();ctx.beginPath();ctx.moveTo(cx()-u*2.1,b-u*.9);ctx.lineTo(cx()+u*2.1,b-u*.9);ctx.lineTo(cx()+u*.45,b+u*2.4);ctx.lineTo(cx()-u*.45,b+u*2.4);ctx.closePath();ctx.fillStyle='#e9c9a1';ctx.fill();ctx.strokeStyle='rgba(90,60,30,.35)';ctx.stroke();
+ctx.beginPath();ctx.moveTo(cx()-u*1.6,b+u*.35);ctx.lineTo(cx()+u*1.6,b+u*.35);ctx.lineTo(cx()+u*1.35,b+u*.7);ctx.lineTo(cx()-u*1.35,b+u*.7);ctx.closePath();ctx.fillStyle='#d6577f';ctx.fill();
+[-1,1].forEach(d=>{ctx.beginPath();ctx.ellipse(cx()+d*u*.4,b+u*.52,u*.4,u*.22,d*-.3,0,6.28);ctx.fill()});dot2(cx(),b+u*.52);ctx.restore()}
+fl.forEach(f=>{const p=cl((now-f.born-450)/1000);if(p>0)bloom(f,eb(p))});
+requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+</script></body></html>
