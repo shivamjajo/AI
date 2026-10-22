@@ -28,17 +28,18 @@ let AC,master,mus,soundOn=true;
 const PENT=[0,2,4,7,9],mf=n=>261.63*Math.pow(2,n/12),CH=[[0,4,7],[-3,0,4],[-7,-3,0],[-5,-1,2]],BAR=3.2;
 function tone(f,t,d,type,v,dest){const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(dest||master);o.start(t);o.stop(t+d+.05)}
 function bar(t,i){const c=CH[i%4];c.forEach(n=>tone(mf(n-12),t,BAR*1.1,'triangle',.05,mus));const pat=[0,1,2,1,2,1,2,1];for(let k=0;k<8;k++)tone(mf(c[pat[k]]+12),t+k*BAR/8,1,'sine',.07,mus);if(i%2)tone(mf(PENT[R()*5|0]+24),t+BAR*.5,1.6,'sine',.05,mus)}
-function initAudio(){try{if(!AC){AC=new(window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=soundOn?.9:0;master.connect(AC.destination);mus=AC.createGain();mus.gain.value=.55;mus.connect(master);let nx=AC.currentTime+.1,ix=0;const sc=()=>{while(nx<AC.currentTime+4){bar(nx,ix++);nx+=BAR}};sc();setInterval(sc,1000)}if(AC.state==='suspended')AC.resume()}catch(e){}}
+function initAudio(){try{if(!AC){AC=new(window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=soundOn?.9:0;master.connect(AC.destination);mus=AC.createGain();mus.gain.value=.55;mus.connect(master);let nx=AC.currentTime+.1,ix=0;const sc=()=>{if(MUSIC)return;while(nx<AC.currentTime+4){bar(nx,ix++);nx+=BAR}};sc();setInterval(sc,1000)}if(AC.state==='suspended')AC.resume();if(MUSIC){if(!AU){AU=new Audio(MUSIC);AU.loop=true;AU.volume=.7}AU.muted=!soundOn;if(AU.paused&&soundOn)AU.play().catch(()=>{})}}catch(e){}}
 function chime(){if(!AC||!soundOn)return;const t=AC.currentTime,n=PENT[R()*5|0]+12*(1+(R()<.5?0:1)),f=mf(n);tone(f,t,1.2,'sine',.22);tone(f*2,t,.5,'sine',.07);tone(f*3,t,.25,'sine',.03)}
 function flourish(){if(!AC||!soundOn)return;const t=AC.currentTime;for(let i=0;i<9;i++)tone(mf(PENT[i%5]+12*(1+(i/5|0))),t+i*.13,1.5,'sine',.2)}
-document.addEventListener('visibilitychange',()=>{if(AC)document.hidden?AC.suspend():AC.resume()});
+document.addEventListener('visibilitychange',()=>{if(AC)document.hidden?AC.suspend():AC.resume();if(AU){if(document.hidden)AU.pause();else if(soundOn)AU.play().catch(()=>{})}});
 const pt=[];
 function burst(x,y){for(let i=0;i<18;i++){const a=R()*6.283,sp=1.5+R()*4;pt.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1.5,l:1,d:.012+R()*.012,s:3+R()*5,h:HUES[R()*HUES.length|0],k:R()<.5?0:1,r:R()*6.28,vr:(R()-.5)*.3})}pt.push({x,y,ring:1,l:1,d:.035,rad:6})}
 function drawPt(){for(let i=pt.length-1;i>=0;i--){const p=pt[i];p.l-=p.d;if(p.l<=0){pt.splice(i,1);continue}ctx.globalAlpha=Math.max(0,p.l);if(p.ring){p.rad+=4;ctx.beginPath();ctx.arc(p.x,p.y,p.rad,0,6.283);ctx.strokeStyle='rgba(255,170,215,.9)';ctx.lineWidth=2;ctx.stroke();continue}p.x+=p.vx;p.y+=p.vy;p.vy+=.07;p.vx*=.985;p.r+=p.vr;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);if(p.k){ctx.fillStyle='hsl('+p.h+',85%,70%)';ctx.beginPath();ctx.ellipse(0,0,p.s,p.s*.5,0,0,6.283);ctx.fill()}else{ctx.fillStyle='#ffe38a';ctx.beginPath();for(let j=0;j<8;j++){const rr=j%2?p.s*.35:p.s*1.2,aa=j*.7854;ctx.lineTo(Math.cos(aa)*rr,Math.sin(aa)*rr)}ctx.closePath();ctx.fill()}ctx.restore()}ctx.globalAlpha=1}
 const snd=document.getElementById('snd');
-snd.onclick=()=>{soundOn=!soundOn;snd.textContent=soundOn?'\U0001F50A':'\U0001F507';initAudio();if(master)master.gain.setTargetAtTime(soundOn?.9:0,AC.currentTime,.05)};
+snd.onclick=()=>{soundOn=!soundOn;snd.textContent=soundOn?'\U0001F50A':'\U0001F507';initAudio();if(master)master.gain.setTargetAtTime(soundOn?.9:0,AC.currentTime,.05);if(AU){AU.muted=!soundOn;if(soundOn&&AU.paused)AU.play().catch(()=>{})}};
 
 const P=new URLSearchParams(location.search),TO=(P.get('name')||P.get('to')||'').trim().slice(0,30),FROM=(P.get('from')||'').trim().slice(0,30);
+const MU=(P.get('music')||'').trim(),MUSIC=/^[\w\-]{1,60}\.(mp3|m4a|ogg|wav)$/i.test(MU)?MU:'';let AU;
 const START=TO?'For '+TO+(FROM?', from '+FROM:'')+' — tap anywhere to plant a flower':(FROM?'From '+FROM+' — tap anywhere to plant a flower':'Tap anywhere to plant a flower');
 msg.textContent=START;
 function rs(){const d=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;ctx.setTransform(d,0,0,d,0,0)}
